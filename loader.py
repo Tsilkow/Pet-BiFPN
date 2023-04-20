@@ -7,13 +7,13 @@ def load_image_from_file(hparams, path):
     input_transforms_raw = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Resize(hparams.image_size),
+            torchvision.transforms.Resize(hparams.image_size, antialias=True),
         ]
     )
     input_transforms_normalized = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Resize(hparams.image_size),
+            torchvision.transforms.Resize(hparams.image_size, antialias=True),
             torchvision.transforms.Normalize(hparams.image_net_mean, hparams.image_net_std),
         ]
     )
@@ -22,11 +22,34 @@ def load_image_from_file(hparams, path):
     return None, None
 
 
+def load_image_from_database(hparams):
+    input_transforms_raw = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Resize(hparams.image_size, antialias=True),
+        ]
+    )
+    input_transforms_normalized = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Resize(hparams.image_size, antialias=True),
+            torchvision.transforms.Normalize(hparams.image_net_mean, hparams.image_net_std),
+        ]
+    )
+    dataset = torchvision.datasets.OxfordIIITPet(
+        root=hparams.data_dir,
+        split='test',
+        download=True
+    )
+    return (input_transforms_raw(dataset[0][0]).unsqueeze(dim=0),
+            input_transforms_normalized(dataset[0][0]).unsqueeze(dim=0))
+
+
 def create_loader(hparams, data_split, sample_limit=None):
     input_transforms = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Resize(hparams.image_size),
+            torchvision.transforms.Resize(hparams.image_size, antialias=True),
             torchvision.transforms.Normalize(hparams.image_net_mean, hparams.image_net_std),
         ]
     )

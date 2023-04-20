@@ -47,7 +47,7 @@ def visualize_data(images, masks):
     num_images = images.shape[0]
     assert masks.shape[0] == num_images
 
-    figure, axes = plt.subplots(num_images, 4, figsize=(20, 5*num_images))
+    figure, axes = plt.subplots(num_images, 4, figsize=(20, 5*num_images), squeeze=False)
 
     for i, ax in enumerate(axes):
         for j, img in enumerate(

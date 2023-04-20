@@ -1,10 +1,10 @@
 import time
 import argparse
 import torch
-from loader import load_image_from_file, create_loader, test_loader, augment_data
+from loader import load_image_from_file, load_image_from_database, create_loader, test_loader, augment_data
 from visualisation import visualize_data
 from evaluation import test_metrics, one_hot_encode_prediction, eval_fn
-from model import Net
+from bifpn import Net
 
 
 class Hyperparameters:
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     model, optimizer = create_model_and_optimizer(hparams)
     
     if args.load is not None:
-        model = load_checkpoint(model, f'{hparams.models_dir}/{args.load}')
+        load_checkpoint(model, f'{hparams.models_dir}/{args.load}')
 
     images, masks = None, None
 
@@ -128,14 +128,15 @@ if __name__ == '__main__':
         training_loader = create_loader(hparams, 'trainval', hparams.training_sample_limit)
         testing_loader = create_loader(hparams, 'test', hparams.testing_sample_limit)
         train(
-        model, optimizer, training_loader, testing_loader, hparams.epoch_count, eval_fn,
-        device=hparams.device, augment_fn=augment_data)
+            model, optimizer, training_loader, testing_loader, hparams.epoch_count, eval_fn,
+            device=hparams.device, augment_fn=augment_data
+        )
         save_checkpoint(model, f'{hparams.models_dir}/bifpn-{model_signature}.model')
-        images, _ = next(iter(testing_loader))
-        images = images[:4]
+        images, _ = load_image_from_database(hparams)
+        print(images.shape)
 
     if args.input is not None:
-        images = load_image_from_file(hparams, f'{hparams.images_dir}/{args.input}')
+        images, _ = load_image_from_file(hparams, f'{hparams.images_dir}/{args.input}')
 
     if images is not None:
         logits = model(images.to(hparams.device)).detach()
