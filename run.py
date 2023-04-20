@@ -14,8 +14,13 @@ class Hyperparameters:
         self.prediction_size = (64, 64) # width and height of predictions
         self.image_net_mean = [0.485, 0.456, 0.406] # mean for backbone-specific value rescaling
         self.image_net_std = [0.229, 0.224, 0.225] # standard deviation for backbone-specific value rescaling
-        self.data_path = './data'
+        self.data_dir = './data'
+        self.models_dir = './models'
         self.feature_channels = 128
+        self.training_sample_limit = None
+        self.testing_sample_limit = None
+        self.device = 'cpu'
+
 
 
 def train(
@@ -63,9 +68,9 @@ def train(
     ## }
 
 
-def create_model_and_optimizer(hparams, device):
+def create_model_and_optimizer(hparams):
     ## TODO {
-    model = Net(hparams, device)
+    model = Net(hparams).to(hparams.device)
     optimizer = torch.optim.Adam(params=model.non_backbone_parameters())
     for param in model.backbone.backbone.parameters():
         param.requires_grad = False
@@ -87,11 +92,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '-s', '--sanity-test', action=argparse.BooleanOptionalAction,
         help='performs nominal training and testing to confirm code is working')
+    parser.add_argument(
+        '-g', '--gpu', action=argparse.BooleanOptionalAction,
+        help='flag for using GPU as a device; if not specified only CPU will be used')
     args = parser.parse_args()
     if args.sanity_test:
         hparams.epoch_count = 1
         hparams.training_sample_limit = hparams.batch_size
         hparams.testing_sample_limit = hparams.batch_size
+    if args.gpu:
+        hparams.device = 'gpu'
         
     training_loader = create_loader(hparams, 'trainval', hparams.training_sample_limit)
     testing_loader = create_loader(hparams, 'test', hparams.testing_sample_limit)
@@ -103,8 +113,8 @@ if __name__ == '__main__':
     # images, masks = next(iter(training_loader))
     # visualize_data(images[:4], masks[:4])
 
-    model, optimizer = create_model_and_optimizer(hparams, 'cpu')
+    model, optimizer = create_model_and_optimizer(hparams)
     train(
         model, optimizer, training_loader, testing_loader, hparams.epoch_count, eval_fn,
-        device='cpu', augment_fn=augment_data)
-    save_checkpoint(model, './models/bifpn.model')
+        device=hparams.device, augment_fn=augment_data)
+    save_checkpoint(model, f'{hparams.models_dir}/bifpn.model')

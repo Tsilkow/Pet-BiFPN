@@ -21,7 +21,7 @@ def create_loader(hparams, data_split, sample_limit=None):
         ]
     )
     dataset = torchvision.datasets.OxfordIIITPet(
-        root=hparams.data_path,
+        root=hparams.data_dir,
         split=data_split,
         download=True,
         target_types="segmentation",

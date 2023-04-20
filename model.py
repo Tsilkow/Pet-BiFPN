@@ -53,21 +53,17 @@ class BackBoneWrapper(nn.Module):
         ))
         self.num_feature_levels = len(self.feature_channels.items())
 
-        ## TODO{
         self.channel_matchers = nn.ModuleList([MatchChannels(in_channels, out_channels)
                                                for in_channels in self.feature_channels.values()])
-        ## }
 
     def forward(self, x):
         assert len(x.shape) == 4
         assert x.shape[1] == 3
 
         feature_level_dict = self.backbone.extract_endpoints(x)
-
-        ## TODO{
+        
         result = [self.channel_matchers[i](input)
                   for i, input in enumerate(feature_level_dict.values())]
-        ## }
 
         assert len(result) == self.num_feature_levels
         for i in range(self.num_feature_levels):
@@ -98,7 +94,7 @@ class FeatureFusionBlock(nn.Module):
 
     """
 
-    def __init__(self, feature_channels, use_additional, device):
+    def __init__(self, feature_channels, use_additional):
         """
         Args:
             feature_channels - number of channels that each feature has
@@ -106,7 +102,6 @@ class FeatureFusionBlock(nn.Module):
         """
         super().__init__()
         self.use_additional = use_additional
-        ## TODO {
         self.relu = nn.ReLU()
         self.bn = nn.BatchNorm2d(feature_channels)
         self.weights_for_2 = nn.Parameter(torch.rand(2))
@@ -115,7 +110,6 @@ class FeatureFusionBlock(nn.Module):
             nn.Conv2d(feature_channels, feature_channels, 3, 1, 1),
             nn.Conv2d(feature_channels, feature_channels, 1, 1, 0),
         )
-        ## }
 
     def forward(self, current_feature, previous_feature, additional_feature=None):
         # Below we check that self.use_additional iff additional_feature is not None
@@ -127,7 +121,6 @@ class FeatureFusionBlock(nn.Module):
         if additional_feature is not None:
             assert current_feature.shape == additional_feature.shape
 
-        ## TODO {
         if self.use_additional and additional_feature is not None:
             # ACT(BN(CONVS(p1*current_feature + p2*resize(previous_feature) + p3*additional_feature)))
             p = nn.functional.softmax(self.weights_for_3, dim=0)
@@ -141,7 +134,6 @@ class FeatureFusionBlock(nn.Module):
             combined = self.relu(self.bn(self.convs(
                 p[0]*current_feature 
                 + p[1]*nn.functional.interpolate(previous_feature, current_feature.shape[-2:]))))
-        ## }
 
         assert combined.shape == current_feature.shape
 
@@ -160,21 +152,21 @@ class BiFPN(nn.Module):
         self.feature_channels = feature_channels
         self.num_feature_levels = num_feature_levels
         
-        ## TODO {
-        self.fusions_down = []
-        self.fusions_up = [None] # initial fusing is skipped, None is added for alignment purposes
+        self.fusions_up = nn.ModuleList([])
+        # initial fusing is skipped, nn.Identity instance is added for alignment purposess
+        self.fusions_down = nn.ModuleList([nn.Identity()])
 
-        # Matchings and fusions on the way down (towards higher resolution)
+        # Matchings and fusions on the way up (towards higher resolution)
         for i in range(num_feature_levels-1):
-            self.fusions_down.append(
-                FeatureFusionBlock(self.feature_channels, False, device))
-        self.fusions_down.append(None) # final fusing is skipped, None is added for alignment purposes
-
-        # Matchings and fusions on the way up (towards lower resolution)
-        for i in range(1, num_feature_levels):
             self.fusions_up.append(
-                FeatureFusionBlock(self.feature_channels, (i != num_feature_levels-1), device))
-        ## }
+                FeatureFusionBlock(self.feature_channels, False))
+        # final fusing is skipped, nn.Identity instance is added for alignment purposes
+        self.fusions_up.append(nn.Identity())
+
+        # Matchings and fusions on the way down (towards lower resolution)
+        for i in range(1, num_feature_levels):
+            self.fusions_down.append(
+                FeatureFusionBlock(self.feature_channels, (i != num_feature_levels-1)))
 
     def forward(self, features, skip_down=False):
         """
@@ -188,17 +180,15 @@ class BiFPN(nn.Module):
         """
         assert len(features) == self.num_feature_levels
 
-        ## TODO {
         result = [None for feat in features]
-        for i, (feat, fuser) in reversed(list(enumerate(zip(features, self.fusions_down)))):
+        for i, (feat, fuser) in reversed(list(enumerate(zip(features, self.fusions_up)))):
             if i == len(features)-1: result[i] = feat
             else: result[i] = fuser(feat, result[i+1])
         if not skip_down:
-            for i, (feat, fuser) in enumerate(zip(features, self.fusions_up)):
-                if i == 0: result[i] = feat
+            for i, (feat, fuser) in enumerate(zip(features, self.fusions_down)):
+                if i == 0: continue
                 elif i == len(features)-1: result[i] = fuser(feat, result[i-1])
                 else: result[i] = fuser(result[i], result[i-1], feat)
-        ## }
 
         assert len(result) == self.num_feature_levels
         assert result[0].shape == features[0].shape
@@ -227,18 +217,14 @@ class SegmentationHead(nn.Module):
         super().__init__()
         self.output_shape = output_shape
         self.num_classes = num_classes
-        ## TODO {
         self.convs = nn.Sequential(
             nn.Conv2d(feature_channels, inner_channels, 3, 1, 1),
             nn.Conv2d(inner_channels, num_classes, 1, 1, 0),
         )
-        ## }
 
     def forward(self, x):
-        ## TODO {
         x = self.convs(x)
         result = nn.functional.interpolate(x, self.output_shape)
-        ## }
 
         assert result.shape[0] == x.shape[0]
         assert result.shape[1] == self.num_classes
@@ -251,40 +237,33 @@ class Net(nn.Module):
     Uses BackBoneWrapper with feature_channels as a backbone.
     Uses BiFPN.
     Returns a tensor of shape (BATCH, 3, H, W) (where H, W = output_shape)
-    with logits for pet, background, and outline. 
+    with logits for pet, background, and outline.
     """
 
-    def __init__(self, hparams, device):
+    def __init__(self, hparams):
         super().__init__()
-        ## TODO {
         self.backbone = BackBoneWrapper(
-            hparams.prediction_size, hparams.feature_channels, device)
-        self.bifpn1 = BiFPN(6, hparams.feature_channels, device)
+            hparams.prediction_size, hparams.feature_channels, hparams.device)
+        self.bifpn1 = BiFPN(6, hparams.feature_channels, hparams.device)
         #self.bifpn2 = BiFPN(len(FEATURE_CHANNELS), feature_channels).to(device)
-        self.segmentation = SegmentationHead(
-            hparams.feature_channels, hparams.prediction_size)
-        ## }
+        self.segmentation = SegmentationHead(hparams.feature_channels, hparams.prediction_size)
 
     def non_backbone_parameters(self):
         """
         Returns all parameters except the backbone ones
         """
-        ## TODO {
         tmp = [module.parameters() for module in self.backbone.channel_matchers]
         tmp.append(self.bifpn1.parameters())
         #tmp.append(self.bifpn2.parameters())
         tmp.append(self.segmentation.parameters())
         parameters = chain(*tmp)
-        ## }
         return parameters
 
     def forward(self, x):
-        ## TODO {
         x = self.backbone(x)
-        #x = self.bifpn1(x, False)
+        # x = self.bifpn1(x, False)
         x = self.bifpn1(x, True)[0]
         segmentation = self.segmentation(x)
-        ## }
         assert segmentation.shape[0] == x.shape[0]
         assert segmentation.shape[1] == 3 # logits for pet, background and outline
         return segmentation
