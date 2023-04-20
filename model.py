@@ -1,6 +1,11 @@
-import torch
-import torch.nn as nn
+""" PyTorch BiFPN with pretrained EfficientNets
+
+Paper: https://arxiv.org/abs/1911.09070
+"""
+
 from itertools import chain
+import torch
+from torch import nn
 from efficientnet_pytorch import EfficientNet
 
 
@@ -34,15 +39,22 @@ class BackBoneWrapper(nn.Module):
     (first the ones of high resolution; note that FEATURE_FILTERS maintains this order).
     """
 
-    def __init__(self, out_channels):
+    def __init__(self, image_size, out_channels, device):
         super().__init__()
-        self.backbone = EfficientNet.from_pretrained("efficientnet-b0").to(DEVICE)
+        self.backbone = EfficientNet.from_pretrained("efficientnet-b0").to(device)
 
-        self.feature_channels = FEATURE_CHANNELS
+        dummy_input = torch.zeros((1, 3, image_size[0], image_size[1]))
+        features = self.backbone.extract_endpoints(dummy_input)
+        feature_shapes = {feature_name: feature_data.shape
+                          for feature_name, feature_data in features.items()}
+        self.feature_channels = dict(list(
+            {feature_name: feature_shape[1]
+             for feature_name, feature_shape in feature_shapes.items()}.items()
+        ))
         self.num_feature_levels = len(self.feature_channels.items())
 
         ## TODO{
-        self.channel_matchers = nn.ModuleList([MatchChannels(in_channels, out_channels).to(DEVICE)
+        self.channel_matchers = nn.ModuleList([MatchChannels(in_channels, out_channels)
                                                for in_channels in self.feature_channels.values()])
         ## }
 
@@ -86,7 +98,7 @@ class FeatureFusionBlock(nn.Module):
 
     """
 
-    def __init__(self, feature_channels, use_additional):
+    def __init__(self, feature_channels, use_additional, device):
         """
         Args:
             feature_channels - number of channels that each feature has
@@ -95,14 +107,14 @@ class FeatureFusionBlock(nn.Module):
         super().__init__()
         self.use_additional = use_additional
         ## TODO {
-        self.relu = nn.ReLU().to(DEVICE)
-        self.bn = nn.BatchNorm2d(feature_channels).to(DEVICE)
-        self.weights_for_2 = nn.Parameter(torch.rand(2)).to(DEVICE)
-        self.weights_for_3 = nn.Parameter(torch.rand(3)).to(DEVICE)
+        self.relu = nn.ReLU()
+        self.bn = nn.BatchNorm2d(feature_channels)
+        self.weights_for_2 = nn.Parameter(torch.rand(2))
+        self.weights_for_3 = nn.Parameter(torch.rand(3))
         self.convs = nn.Sequential(
             nn.Conv2d(feature_channels, feature_channels, 3, 1, 1),
             nn.Conv2d(feature_channels, feature_channels, 1, 1, 0),
-        ).to(DEVICE)
+        )
         ## }
 
     def forward(self, current_feature, previous_feature, additional_feature=None):
@@ -143,7 +155,7 @@ class BiFPN(nn.Module):
     performs up and down feature fusion process using FeatureFusionBlocks.
     """
 
-    def __init__(self, num_feature_levels, feature_channels):
+    def __init__(self, num_feature_levels, feature_channels, device):
         super().__init__()
         self.feature_channels = feature_channels
         self.num_feature_levels = num_feature_levels
@@ -154,12 +166,14 @@ class BiFPN(nn.Module):
 
         # Matchings and fusions on the way down (towards higher resolution)
         for i in range(num_feature_levels-1):
-            self.fusions_down.append(FeatureFusionBlock(self.feature_channels, False).to(DEVICE))
+            self.fusions_down.append(
+                FeatureFusionBlock(self.feature_channels, False, device))
         self.fusions_down.append(None) # final fusing is skipped, None is added for alignment purposes
 
         # Matchings and fusions on the way up (towards lower resolution)
         for i in range(1, num_feature_levels):
-            self.fusions_up.append(FeatureFusionBlock(self.feature_channels, (i != num_feature_levels-1)).to(DEVICE))
+            self.fusions_up.append(
+                FeatureFusionBlock(self.feature_channels, (i != num_feature_levels-1), device))
         ## }
 
     def forward(self, features, skip_down=False):
@@ -206,19 +220,18 @@ class SegmentationHead(nn.Module):
     def __init__(
         self,
         feature_channels,
-        output_shape=(PREDICTION_HEIGHT, PREDICTION_WIDTH),
+        output_shape,
         inner_channels=64,
-        num_classes=3,
+        num_classes=3
     ):
         super().__init__()
         self.output_shape = output_shape
         self.num_classes = num_classes
         ## TODO {
-        print()
         self.convs = nn.Sequential(
             nn.Conv2d(feature_channels, inner_channels, 3, 1, 1),
             nn.Conv2d(inner_channels, num_classes, 1, 1, 0),
-        ).to(DEVICE)
+        )
         ## }
 
     def forward(self, x):
@@ -241,15 +254,15 @@ class Net(nn.Module):
     with logits for pet, background, and outline. 
     """
 
-    def __init__(
-        self, feature_channels=128, output_shape=(PREDICTION_HEIGHT, PREDICTION_WIDTH)
-    ):
+    def __init__(self, hparams, device):
         super().__init__()
         ## TODO {
-        self.backbone = BackBoneWrapper(feature_channels).to(DEVICE)
-        self.bifpn1 = BiFPN(len(FEATURE_CHANNELS), feature_channels).to(DEVICE)
-        #self.bifpn2 = BiFPN(len(FEATURE_CHANNELS), feature_channels).to(DEVICE)
-        self.segmentation = SegmentationHead(feature_channels, output_shape).to(DEVICE)
+        self.backbone = BackBoneWrapper(
+            hparams.prediction_size, hparams.feature_channels, device)
+        self.bifpn1 = BiFPN(6, hparams.feature_channels, device)
+        #self.bifpn2 = BiFPN(len(FEATURE_CHANNELS), feature_channels).to(device)
+        self.segmentation = SegmentationHead(
+            hparams.feature_channels, hparams.prediction_size)
         ## }
 
     def non_backbone_parameters(self):

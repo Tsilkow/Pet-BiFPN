@@ -2,7 +2,7 @@ import torch
 import torchvision
 
 
-def create_loaders(hparams):
+def create_loader(hparams, data_split, sample_limit=None):
     input_transforms = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
@@ -14,35 +14,26 @@ def create_loaders(hparams):
         [
             torchvision.transforms.PILToTensor(),
             torchvision.transforms.Resize(
-                hparams.image_size,
+                hparams.prediction_size,
                 interpolation=torchvision.transforms.InterpolationMode.NEAREST),
             torchvision.transforms.Lambda(lambda x: x - torch.ones_like(x)),
             torchvision.transforms.Lambda(lambda x: x.squeeze(dim=0).long()),
         ]
     )
-    training_dataset = torchvision.datasets.OxfordIIITPet(
+    dataset = torchvision.datasets.OxfordIIITPet(
         root=hparams.data_path,
-        split="trainval",
+        split=data_split,
         download=True,
         target_types="segmentation",
         transform=input_transforms,
         target_transform=target_transforms,
     )
-    testing_dataset = torchvision.datasets.OxfordIIITPet(
-        root=hparams.data_path,
-        split="test",
-        download=True,
-        target_types="segmentation",
-        transform=input_transforms,
-        target_transform=target_transforms,
+    if sample_limit is not None:
+        dataset = torch.utils.data.Subset(dataset, range(sample_limit))
+    loader = torch.utils.data.DataLoader(
+        dataset, shuffle=True, batch_size=hparams.batch_size
     )
-    training_loader = torch.utils.data.DataLoader(
-        training_dataset, shuffle=True, batch_size=hparams.batch_size
-    )
-    testing_loader = torch.utils.data.DataLoader(
-        testing_dataset, shuffle=True, batch_size=hparams.batch_size
-    )
-    return training_loader, testing_loader
+    return loader
 
 
 def test_loader(hparams, loader):
@@ -56,6 +47,7 @@ def test_loader(hparams, loader):
     assert images.shape[3] == hparams.image_size[1]
     assert images.dtype == torch.float32
 
+    print(masks.shape, hparams.batch_size, hparams.prediction_size)
     assert len(masks.shape) == 3
     assert masks.shape[0] == hparams.batch_size
     assert masks.shape[1] == hparams.prediction_size[0]

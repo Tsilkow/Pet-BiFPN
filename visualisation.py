@@ -1,5 +1,5 @@
 import torch
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 
 def get_pet_mask(mask):

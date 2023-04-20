@@ -1,3 +1,5 @@
+import torch
+from torch import nn
 import numpy as np
 
 
@@ -88,7 +90,7 @@ def one_hot_encode_prediction(predictions):
 
     assert len(predictions.shape) == 3
 
-    predictions_oh = torch.nn.functional.one_hot(predictions, num_classes=3)
+    predictions_oh = nn.functional.one_hot(predictions, num_classes=3)
     predictions_oh = predictions_oh.permute(0, 3, 1, 2)  # B, C, H, W
 
     assert len(predictions_oh.shape) == 4

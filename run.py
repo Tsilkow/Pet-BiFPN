@@ -1,17 +1,21 @@
+import argparse
 import torch
-from loader import create_loaders, test_loader, augment_data
+from loader import create_loader, test_loader, augment_data
 from visualisation import visualize_data
 from evaluation import test_metrics, one_hot_encode_prediction, eval_fn
+from model import Net
 
 
 class Hyperparameters:
     def __init__(self):
+        self.epoch_count = 10
         self.batch_size = 16
         self.image_size = (128, 128) # width and height input images are scaled to
         self.prediction_size = (64, 64) # width and height of predictions
         self.image_net_mean = [0.485, 0.456, 0.406] # mean for backbone-specific value rescaling
         self.image_net_std = [0.229, 0.224, 0.225] # standard deviation for backbone-specific value rescaling
         self.data_path = './data'
+        self.feature_channels = 128
 
 
 def train(
@@ -59,9 +63,9 @@ def train(
     ## }
 
 
-def create_model_and_optimizer():
+def create_model_and_optimizer(hparams, device):
     ## TODO {
-    model = Net()
+    model = Net(hparams, device)
     optimizer = torch.optim.Adam(params=model.non_backbone_parameters())
     for param in model.backbone.backbone.parameters():
         param.requires_grad = False
@@ -79,13 +83,28 @@ def load_checkpoint(model, dir):
 
 if __name__ == '__main__':
     hparams = Hyperparameters()
-    training_loader, testing_loader = create_loaders(hparams)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-s', '--sanity-test', action=argparse.BooleanOptionalAction,
+        help='performs nominal training and testing to confirm code is working')
+    args = parser.parse_args()
+    if args.sanity_test:
+        hparams.epoch_count = 1
+        hparams.training_sample_limit = hparams.batch_size
+        hparams.testing_sample_limit = hparams.batch_size
+        
+    training_loader = create_loader(hparams, 'trainval', hparams.training_sample_limit)
+    testing_loader = create_loader(hparams, 'test', hparams.testing_sample_limit)
+
     test_loader(hparams, training_loader)
     test_loader(hparams, testing_loader)
     test_metrics()
 
-    visualize_data(training_loader[0][:4], training_loader[1][:4])
+    # images, masks = next(iter(training_loader))
+    # visualize_data(images[:4], masks[:4])
 
-    model, optimizer = create_model_and_optimizer()
-    train(model, optimizer, training_loader, testing_loader, 3, eval_fn, augment_fn=augment_data)
+    model, optimizer = create_model_and_optimizer(hparams, 'cpu')
+    train(
+        model, optimizer, training_loader, testing_loader, hparams.epoch_count, eval_fn,
+        device='cpu', augment_fn=augment_data)
     save_checkpoint(model, './models/bifpn.model')
