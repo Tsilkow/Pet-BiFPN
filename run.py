@@ -122,7 +122,7 @@ if __name__ == '__main__':
     if args.load is not None:
         load_checkpoint(model, f'{hparams.models_dir}/{args.load}')
 
-    images, masks = None, None
+    images_raw, images_normalized = None, None
 
     if args.train:
         training_loader = create_loader(hparams, 'trainval', hparams.training_sample_limit)
@@ -132,13 +132,13 @@ if __name__ == '__main__':
             device=hparams.device, augment_fn=augment_data
         )
         save_checkpoint(model, f'{hparams.models_dir}/bifpn-{model_signature}.model')
-        images, _ = load_image_from_database(hparams)
-        print(images.shape)
 
     if args.input is not None:
-        images, _ = load_image_from_file(hparams, f'{hparams.images_dir}/{args.input}')
+        images_raw, images_normalized = load_image_from_file(hparams, f'{hparams.images_dir}/{args.input}')
+    else:
+        images_raw, images_normalized = load_image_from_database(hparams)
 
-    if images is not None:
-        logits = model(images.to(hparams.device)).detach()
+    if images_raw is not None:
+        logits = model(images_normalized.to(hparams.device)).detach()
         prediction = torch.argmax(logits, dim=-3, keepdim=False)
-        visualize_data(images.cpu(), prediction.cpu())
+        visualize_data(images_raw.cpu(), prediction.cpu())
