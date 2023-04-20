@@ -245,7 +245,7 @@ class Net(nn.Module):
         self.backbone = BackBoneWrapper(
             hparams.prediction_size, hparams.feature_channels, hparams.device)
         self.bifpn1 = BiFPN(6, hparams.feature_channels, hparams.device)
-        #self.bifpn2 = BiFPN(len(FEATURE_CHANNELS), feature_channels).to(device)
+        self.bifpn2 = BiFPN(6, hparams.feature_channels, hparams.device)
         self.segmentation = SegmentationHead(hparams.feature_channels, hparams.prediction_size)
 
     def non_backbone_parameters(self):
@@ -254,15 +254,15 @@ class Net(nn.Module):
         """
         tmp = [module.parameters() for module in self.backbone.channel_matchers]
         tmp.append(self.bifpn1.parameters())
-        #tmp.append(self.bifpn2.parameters())
+        tmp.append(self.bifpn2.parameters())
         tmp.append(self.segmentation.parameters())
         parameters = chain(*tmp)
         return parameters
 
     def forward(self, x):
         x = self.backbone(x)
-        # x = self.bifpn1(x, False)
-        x = self.bifpn1(x, True)[0]
+        x = self.bifpn1(x, False)
+        x = self.bifpn2(x, True)[0]
         segmentation = self.segmentation(x)
         assert segmentation.shape[0] == x.shape[0]
         assert segmentation.shape[1] == 3 # logits for pet, background and outline
