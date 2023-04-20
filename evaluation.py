@@ -19,11 +19,11 @@ def calc_iou(prediction, ground_truth):
     assert prediction.shape == ground_truth.shape
     assert np.logical_or(prediction == 1, prediction == 0).all()
     assert np.logical_or(ground_truth == 1, ground_truth == 0).all()
-    ## TODO {
+
     intersection = np.logical_and(prediction == 1, ground_truth == 1).sum(axis=(2, 3))
     union = np.logical_or(prediction == 1, ground_truth == 1).sum(axis=(2, 3))
     result = np.divide(intersection, union, out=np.zeros(prediction.shape[:2]), where=(union != 0))
-    ## }
+    
     assert result.shape == prediction.shape[:2]
     return result
 
@@ -41,22 +41,21 @@ def calc_accuracy(prediction, ground_truth):
     assert prediction.shape == ground_truth.shape
     assert np.logical_or(prediction == 1, prediction == 0).all()
     assert np.logical_or(ground_truth == 1, ground_truth == 0).all()
-    ## TODO {
+
     correct = (prediction == ground_truth).sum(axis=(2, 3))
     result = correct / (ground_truth.shape[2]*ground_truth.shape[3])
-    ## }
+
     assert result.shape == prediction.shape[:2]
     return result
 
 
 def test_metrics():
-    # Some tests
-
     a = np.zeros((1, 1, 64, 64))
     a[:, :, 32:48, 32:48] = 1
     b = np.zeros((1, 1, 64, 64))
     b[:, :, 47:63, 47:63] = 1
 
+    # Tests for calc_iou:
     assert np.isclose(
         calc_iou(np.concatenate([a, a], axis=1), np.concatenate([a, b], axis=1)),
         np.array([1.0, 1.0 / 511.0])[None, :],
@@ -69,6 +68,7 @@ def test_metrics():
         np.array([0.0])[:, None],
     ).all()
     
+    # Tests for calc_accuracy:
     assert np.isclose(
         calc_accuracy(np.concatenate([a, a], axis=1), np.concatenate([a, b], axis=1)),
         np.array([1.0, (4096-510)/4096])[None, :],
@@ -107,7 +107,7 @@ def eval_fn(model, test_loader, device):
     total = 0
     for i, data in enumerate(test_loader):
         x, y = data
-        print(f'\r---EVALUATION: {str(i+1).rjust(3)}/{len(test_loader)}    ', end='')
+        print(f'\rEVALUATION: {str(i+1).rjust(3)}/{len(test_loader)}    ', end='')
         ground_truth = one_hot_encode_prediction(y).cpu().numpy()
         x, y = x.to(device), y.to(device)
 

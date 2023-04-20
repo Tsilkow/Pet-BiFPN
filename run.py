@@ -46,16 +46,15 @@ def train(
                       used only for train set augmentation
 
     """
-    ## TODO {
     weight = weight.to(device)
     model = model.to(device)
     for param in model.backbone.backbone.parameters():
-        assert(param.requires_grad == False)
+        assert param.requires_grad is False
     loss = torch.nn.CrossEntropyLoss(weight)
     for e in range(num_epoch):
         model.train()
         for i, (images, masks) in enumerate(training_loader):
-            print(f'\r---EPOCH {e+1}/{num_epoch}: {str(i).rjust(3)}/{len(training_loader)}      ', end='')
+            print(f'\rEPOCH {e+1}/{num_epoch}: {str(i).rjust(3)}/{len(training_loader)}      ', end='')
             optimizer.zero_grad()
             images, masks = augment_fn(images, masks)
             images, masks = images.to(device), masks.to(device)
@@ -65,25 +64,22 @@ def train(
             error.backward()
             optimizer.step()
     eval_fn(model, testing_loader, device)
-    ## }
 
 
 def create_model_and_optimizer(hparams):
-    ## TODO {
     model = Net(hparams).to(hparams.device)
     optimizer = torch.optim.Adam(params=model.non_backbone_parameters())
     for param in model.backbone.backbone.parameters():
         param.requires_grad = False
-    ## }
     return model, optimizer
 
 
-def save_checkpoint(model, dir):
-    torch.save(model.state_dict(), dir)
+def save_checkpoint(model, path):
+    torch.save(model.state_dict(), path)
 
 
-def load_checkpoint(model, dir):
-    model.load_state_dict(torch.load(dir))
+def load_checkpoint(model, path):
+    model.load_state_dict(torch.load(path))
 
 
 if __name__ == '__main__':
