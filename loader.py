@@ -1,5 +1,25 @@
 import torch
 import torchvision
+from PIL import Image
+
+
+def load_image_from_file(hparams, path):
+    input_transforms_raw = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Resize(hparams.image_size),
+        ]
+    )
+    input_transforms_normalized = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Resize(hparams.image_size),
+            torchvision.transforms.Normalize(hparams.image_net_mean, hparams.image_net_std),
+        ]
+    )
+    with Image.open(path) as image:
+        return input_transforms_raw(image), input_transforms_normalized(image)
+    return None, None
 
 
 def create_loader(hparams, data_split, sample_limit=None):
