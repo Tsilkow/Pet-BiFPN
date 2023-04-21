@@ -1,3 +1,4 @@
+import random
 import torch
 import torchvision
 from PIL import Image
@@ -41,8 +42,9 @@ def load_image_from_database(hparams):
         split='test',
         download=True
     )
-    return (input_transforms_raw(dataset[0][0]).unsqueeze(dim=0),
-            input_transforms_normalized(dataset[0][0]).unsqueeze(dim=0))
+    chosen = random.choice(dataset)[0]
+    return (input_transforms_raw(chosen).unsqueeze(dim=0),
+            input_transforms_normalized(chosen).unsqueeze(dim=0))
 
 
 def create_loader(hparams, data_split, sample_limit=None):
@@ -100,7 +102,7 @@ def test_loader(hparams, loader):
     assert (masks >= 0).all()
 
 
-def augment_data(images, ground_truth):
+def augment_data(images, ground_truth, angle_amplitude):
     """
     Args:
         images of shape (B, 3, H, W)
@@ -115,11 +117,9 @@ def augment_data(images, ground_truth):
 
     assert ground_truth.shape[0] == batch_size
 
-    ## TODO {
-    angle = (float(torch.rand(1)[0])-0.5)*20
-    aug_images = torchvision.transforms.functional.rotate(images, angle)
-    aug_gt = torchvision.transforms.functional.rotate(ground_truth, angle)
-    ## }
+    rotator = torchvision.transforms.RandomRotation(angle_amplitude, fill=1)
+    aug_images = rotator(images)
+    aug_gt = rotator(ground_truth)
 
     assert aug_images.shape == images.shape
     assert ground_truth.shape == aug_gt.shape

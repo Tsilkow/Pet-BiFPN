@@ -1,4 +1,5 @@
 import torch
+import torchvision
 import matplotlib.pyplot as plt
 
 
@@ -47,15 +48,24 @@ def visualize_data(images, masks):
     num_images = images.shape[0]
     assert masks.shape[0] == num_images
 
-    figure, axes = plt.subplots(num_images, 4, figsize=(20, 5*num_images), squeeze=False)
+    resizer = torchvision.transforms.Resize(
+        images[0].shape[1:],
+        interpolation=torchvision.transforms.InterpolationMode.NEAREST,
+        antialias=None)
 
-    for i, ax in enumerate(axes):
-        for j, img in enumerate(
-            [images[i],
-             layer_to_tensor(get_pet_mask(masks[i])),
-             layer_to_tensor(get_pet_outline(masks[i])),
-             layer_to_tensor(get_pet_background(masks[i]))]):
-            tmp = tensor_to_image(img)
-            ax[j].imshow(tmp)
+    figure, axes = plt.subplots(num_images, 3, figsize=(20, 5*num_images), squeeze=False)
+
+    for ax, image, mask in zip(axes, images, masks):
+        for slot, picture in zip(
+                ax,
+                [image,
+                 image * resizer(torch.maximum(
+                     layer_to_tensor(get_pet_mask(mask)),
+                     layer_to_tensor(get_pet_outline(mask)))),
+                 image * resizer(layer_to_tensor(get_pet_background(mask)))]):
+            tmp = tensor_to_image(picture)
+            slot.axis('off')
+            slot.grid(False)
+            slot.imshow(tmp)
 
     plt.show()

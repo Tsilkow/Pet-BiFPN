@@ -21,20 +21,22 @@ class Hyperparameters:
         self.feature_channels = 128
         self.training_sample_limit = None
         self.testing_sample_limit = None
+        self.random_angle_amplitude = 10
         self.device = 'cpu'
 
 
 
 def train(
-    model,
-    optimizer,
-    training_loader,
-    testing_loader,
-    num_epoch,
-    eval_fn,
-    device,
-    weight=torch.tensor([1.0, 1.0, 1.0]),
-    augment_fn=(lambda im, gt: (im, gt)),
+        model,
+        optimizer,
+        training_loader,
+        testing_loader,
+        num_epoch,
+        eval_fn,
+        random_angle_amplitude,
+        device,
+        weight=torch.tensor([1.0, 1.0, 1.0]),
+        augment_fn=(lambda im, gt: (im, gt)),
 ):
     """
     Args:
@@ -58,7 +60,7 @@ def train(
         for i, (images, masks) in enumerate(training_loader):
             print(f'\rEPOCH {e+1}/{num_epoch}: {str(i).rjust(3)}/{len(training_loader)}      ', end='')
             optimizer.zero_grad()
-            images, masks = augment_fn(images, masks)
+            images, masks = augment_fn(images, masks, random_angle_amplitude)
             images, masks = images.to(device), masks.to(device)
             output = model(images)
             ground_truth = one_hot_encode_prediction(masks).to(torch.float).to(device)
@@ -129,7 +131,7 @@ if __name__ == '__main__':
         testing_loader = create_loader(hparams, 'test', hparams.testing_sample_limit)
         train(
             model, optimizer, training_loader, testing_loader, hparams.epoch_count, eval_fn,
-            device=hparams.device, augment_fn=augment_data
+            hparams.random_angle_amplitude, device=hparams.device, augment_fn=augment_data
         )
         save_checkpoint(model, f'{hparams.models_dir}/bifpn-{model_signature}.model')
 
