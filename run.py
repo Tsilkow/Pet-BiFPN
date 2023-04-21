@@ -108,6 +108,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '-i', '--input',
         help=f'filename of custom input in {hparams.images_dir} to run segmentation on; if unspecified, test dataset will be used')
+    parser.add_argument(
+        '-S', '--supress', action=argparse.BooleanOptionalAction,
+        help=f'supress pop-up images')
     args = parser.parse_args()
     
     if args.sanity_test:
@@ -143,4 +146,4 @@ if __name__ == '__main__':
     if images_raw is not None:
         logits = model(images_normalized.to(hparams.device)).detach()
         prediction = torch.argmax(logits, dim=-3, keepdim=False)
-        visualize_data(images_raw.cpu(), prediction.cpu())
+        visualize_data(images_raw.cpu(), prediction.cpu(), supress=args.supress)

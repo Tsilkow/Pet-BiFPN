@@ -1,3 +1,6 @@
 __pycache__/
 data/
 venv/
+models/*
+!models/.gitignore
+result.png

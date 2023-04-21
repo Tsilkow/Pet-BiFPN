@@ -35,7 +35,7 @@ def layer_to_tensor(layer):
     return layer.repeat(3, 1, 1)
 
 
-def visualize_data(images, masks):
+def visualize_data(images, masks, supress=False):
     """
     Args:
         images: tensor of shape (BATCH, 3, H, W)
@@ -53,7 +53,7 @@ def visualize_data(images, masks):
         interpolation=torchvision.transforms.InterpolationMode.NEAREST,
         antialias=None)
 
-    figure, axes = plt.subplots(num_images, 3, figsize=(20, 5*num_images), squeeze=False)
+    figure, axes = plt.subplots(num_images, 3, figsize=(15, 5*num_images), squeeze=False)
 
     for ax, image, mask in zip(axes, images, masks):
         for slot, picture in zip(
@@ -68,4 +68,5 @@ def visualize_data(images, masks):
             slot.grid(False)
             slot.imshow(tmp)
 
-    plt.show()
+    plt.savefig('result.png')
+    if not supress: plt.show()
