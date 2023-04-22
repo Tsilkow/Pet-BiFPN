@@ -19,7 +19,8 @@ def load_image_from_file(hparams, path):
         ]
     )
     with Image.open(path) as image:
-        return input_transforms_raw(image), input_transforms_normalized(image)
+        return (input_transforms_raw(image).unsqueeze(dim=0),
+                input_transforms_normalized(image).unsqueeze(dim=0))
     return None, None
 
 

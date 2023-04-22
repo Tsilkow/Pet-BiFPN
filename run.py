@@ -82,7 +82,7 @@ def save_checkpoint(model, path):
     torch.save(model.state_dict(), path)
 
 
-def load_checkpoint(model, path):
+def load_checkpoint(model, path, device):
     model.load_state_dict(torch.load(path))
 
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     model, optimizer = create_model_and_optimizer(hparams)
     
     if args.load is not None:
-        load_checkpoint(model, f'{hparams.models_dir}/{args.load}')
+        load_checkpoint(model, f'{hparams.models_dir}/{args.load}', hparams.device)
 
     images_raw, images_normalized = None, None
 
@@ -140,6 +140,7 @@ if __name__ == '__main__':
 
     if args.input is not None:
         images_raw, images_normalized = load_image_from_file(hparams, f'{hparams.images_dir}/{args.input}')
+        print(images_raw.shape)
     else:
         images_raw, images_normalized = load_image_from_database(hparams)
 
