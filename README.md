@@ -37,4 +37,4 @@ pip install -r requirements.txt
 To train a new model, simply run `python run.py --train`.  
 To load a model from 'models/', run `python run.py --load <model filename>`.  
 If you want to see result on your own image, put it in 'images/' and add flag `--input <image filename>` to the command.  
-If you want to use GPU for training, add flag `--gpu`.  
+If you want to use CUDA-capable GPU for training, add flag `--cuda`.  
