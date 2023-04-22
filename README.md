@@ -7,7 +7,7 @@ Model was trained using CUDA on entropy server provided by MIMUW.
 After 10 epochs on architecture with 2 BiFPN layers it achieved following results:
 
 | Pet IOU | Background IOU | Outline IOU | Pet Accuracy | Background Accuracy | Outline Accuracy |
-| --- | --- | --- | --- | --- | --- |
+| :---: | :---: | :---: | :---: | :---: | :---: |
 | 80.1% | 88.8% | 44.2% | 94.5% | 93.8% | 91.4% |
 
 Here are some example results from the Oxford-IIIT Pet Dataset:
