@@ -22,7 +22,7 @@ class Hyperparameters:
         self.training_sample_limit = None
         self.testing_sample_limit = None
         self.random_angle_amplitude = 10
-        self.device = 'cpu'
+        self.device = torch.device('cpu')
 
 
 
@@ -91,11 +91,11 @@ if __name__ == '__main__':
     model_signature = time.strftime("%Y%m%d-%H%M%S")
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-s', '--sanity-test', action=argparse.BooleanOptionalAction,
+        '-s', '--sanity-test', action='store_true',
         help='performs nominal training and testing to confirm code is working')
     parser.add_argument(
-        '-g', '--gpu', action=argparse.BooleanOptionalAction,
-        help='flag for using GPU as a device; if not specified only CPU will be used')
+        '-c', '--cuda', action='store_true',
+        help='flag for using CUDA as a device; if not specified only CPU will be used')
     parser.add_argument(
         '-n', '--name',
         help=f'filename used to save model in {hparams.models_dir}')
@@ -103,13 +103,13 @@ if __name__ == '__main__':
         '-l', '--load',
         help=f'loads model from specified file in {hparams.models_dir}; if not specified new model is created')
     parser.add_argument(
-        '-t', '--train', action=argparse.BooleanOptionalAction,
+        '-t', '--train', action='store_true',
         help=f'flag for running training of the model; if not specified, existing model will be used to create visualisations')
     parser.add_argument(
         '-i', '--input',
         help=f'filename of custom input in {hparams.images_dir} to run segmentation on; if unspecified, test dataset will be used')
     parser.add_argument(
-        '-S', '--supress', action=argparse.BooleanOptionalAction,
+        '-S', '--supress', action='store_true',
         help=f'supress pop-up images')
     args = parser.parse_args()
     
@@ -118,7 +118,7 @@ if __name__ == '__main__':
         hparams.training_sample_limit = hparams.batch_size
         hparams.testing_sample_limit = hparams.batch_size
     if args.gpu:
-        hparams.device = 'gpu'
+        hparams.device = torch.device('cuda')
     if args.name is not None:
         model_signature = args.name
 
