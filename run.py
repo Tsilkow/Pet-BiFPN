@@ -117,7 +117,7 @@ if __name__ == '__main__':
         hparams.epoch_count = 1
         hparams.training_sample_limit = hparams.batch_size
         hparams.testing_sample_limit = hparams.batch_size
-    if args.gpu:
+    if args.cuda:
         hparams.device = torch.device('cuda')
     if args.name is not None:
         model_signature = args.name
