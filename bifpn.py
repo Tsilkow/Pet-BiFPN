@@ -43,7 +43,7 @@ class BackBoneWrapper(nn.Module):
         super().__init__()
         self.backbone = EfficientNet.from_pretrained("efficientnet-b0").to(device)
 
-        dummy_input = torch.zeros((1, 3, image_size[0], image_size[1]))
+        dummy_input = torch.zeros((1, 3, image_size[0], image_size[1])).to(device)
         features = self.backbone.extract_endpoints(dummy_input)
         feature_shapes = {feature_name: feature_data.shape
                           for feature_name, feature_data in features.items()}
