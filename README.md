@@ -4,7 +4,7 @@ Based on [EfficientDet: Scalable and Efficient Object Detection](https://arxiv.o
 
 ## Results
 Model was trained using CUDA on entropy server provided by MIMUW.  
-After 10 epochs on architecture with 2 BiFPN layers it achieved following results:
+After 10 epochs of training on an architecture with 2 BiFPN layers it achieved following results:
 
 | Pet IOU | Background IOU | Outline IOU | Pet Accuracy | Background Accuracy | Outline Accuracy |
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -24,7 +24,7 @@ Here are some example results of pictures from outside the dataset (of a friendl
 ![oskar 3](https://raw.githubusercontent.com/Tsilkow/Pet_BiFPN/main/oskar_3_result.png)
 ![oskar 4](https://raw.githubusercontent.com/Tsilkow/Pet_BiFPN/main/oskar_4_result.png)
 
-Outside examples show even more better problems with classification, when only some of the dog is visible or if the picture is a close-up.
+Uncurated pictures have even better examples of problems with classification, mainly when only some of the dog is visible or if the picture is a close-up.
 
 ## How to run
 **Pytorch does not yet support Python 3.11 -- it's recommended to use Python 3.10.**  
