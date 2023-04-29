@@ -139,8 +139,8 @@ if __name__ == '__main__':
         save_checkpoint(model, f'{hparams.models_dir}/bifpn-{model_signature}.model')
 
     if args.input is not None:
-        images_raw, images_normalized = load_image_from_file(hparams, f'{hparams.images_dir}/{args.input}')
-        print(images_raw.shape)
+        images_raw, images_normalized = load_image_from_file(hparams,
+                                                             f'{hparams.images_dir}/{args.input}')
     else:
         images_raw, images_normalized = load_image_from_database(hparams)
 
